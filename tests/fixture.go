@@ -8,16 +8,16 @@ import (
 
 type Fixture struct {
 	db        *sqlx.DB
-	employees *employee.EmployeeRepository
-	roles     *role.RoleRepository
+	employees *employee.Repository
+	roles     *role.Repository
 }
 
 func NewFixture(db *sqlx.DB) *Fixture {
 	initSchema(db)
 	return &Fixture{
 		db:        db,
-		employees: employee.NewEmployeeRepository(db),
-		roles:     role.NewRoleRepository(db),
+		employees: employee.NewRepository(db),
+		roles:     role.NewRepository(db),
 	}
 }
 
@@ -40,10 +40,10 @@ func initSchema(db *sqlx.DB) {
 }
 
 func (f *Fixture) Employee(name string) int64 {
-	entity := employee.EmployeeEntity{
+	entity := employee.Entity{
 		Name: name,
 	}
-	newId, err := f.employees.Create(&entity)
+	newId, err := f.employees.Add(&entity)
 	if err != nil {
 		panic(err)
 	}
@@ -51,10 +51,10 @@ func (f *Fixture) Employee(name string) int64 {
 }
 
 func (f *Fixture) Role(name string) int64 {
-	entity := role.RoleEntity{
+	entity := role.Entity{
 		Name: name,
 	}
-	newId, err := f.roles.Create(&entity)
+	newId, err := f.roles.Add(&entity)
 	if err != nil {
 		panic(err)
 	}
