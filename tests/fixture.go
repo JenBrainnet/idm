@@ -43,7 +43,7 @@ func (f *Fixture) Employee(name string) int64 {
 	entity := employee.Entity{
 		Name: name,
 	}
-	newId, err := f.employees.Add(&entity)
+	newId, err := f.employees.Save(&entity)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func (f *Fixture) Role(name string) int64 {
 	entity := role.Entity{
 		Name: name,
 	}
-	newId, err := f.roles.Add(&entity)
+	newId, err := f.roles.Save(&entity)
 	if err != nil {
 		panic(err)
 	}
