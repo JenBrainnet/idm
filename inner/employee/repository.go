@@ -13,7 +13,7 @@ func NewRepository(database *sqlx.DB) *Repository {
 	return &Repository{db: database}
 }
 
-func (r *Repository) Add(employee *Entity) (id int64, err error) {
+func (r *Repository) Save(employee *Entity) (id int64, err error) {
 	query := "insert into employee (name) values ($1) returning id"
 	err = r.db.QueryRowx(query, employee.Name).Scan(&id)
 	return id, err

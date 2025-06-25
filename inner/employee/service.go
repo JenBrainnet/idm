@@ -7,7 +7,7 @@ type Service struct {
 }
 
 type Repo interface {
-	Add(e *Entity) (int64, error)
+	Save(e *Entity) (int64, error)
 	FindById(id int64) (Entity, error)
 	FindAll() ([]Entity, error)
 	FindAllByIds(ids []int64) ([]Entity, error)
@@ -21,8 +21,8 @@ func NewService(repo Repo) *Service {
 	}
 }
 
-func (svc *Service) Add(e *Entity) (int64, error) {
-	id, err := svc.repo.Add(e)
+func (svc *Service) Save(e *Entity) (int64, error) {
+	id, err := svc.repo.Save(e)
 	if err != nil {
 		return 0, fmt.Errorf("error adding employee: %w", err)
 	}
