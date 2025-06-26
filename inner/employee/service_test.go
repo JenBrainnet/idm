@@ -3,6 +3,8 @@ package employee
 import (
 	"errors"
 	"fmt"
+	"github.com/78bits/go-sqlmock-sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert" // импортируем библиотеку с ассерт-функциями
 	"github.com/stretchr/testify/mock"   // импортируем пакет для создания моков
 	"testing"
@@ -12,6 +14,21 @@ import (
 // объявляем структуру мок-репозитория
 type MockRepo struct {
 	mock.Mock
+}
+
+func (m *MockRepo) SaveTx(tx *sqlx.Tx, e *Entity) (int64, error) {
+	args := m.Called(tx, e)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockRepo) FindByNameTx(tx *sqlx.Tx, name string) (bool, error) {
+	args := m.Called(tx, name)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRepo) BeginTransaction() (*sqlx.Tx, error) {
+	args := m.Called()
+	return args.Get(0).(*sqlx.Tx), args.Error(1)
 }
 
 func (m *MockRepo) Save(e *Entity) (int64, error) {
@@ -77,6 +94,119 @@ func TestSave(t *testing.T) {
 		a.Equal(int64(0), id)
 		a.EqualError(err, want.Error())
 		a.True(repo.AssertNumberOfCalls(t, "Save", 1))
+	})
+}
+
+func TestSaveIfNameUnique(t *testing.T) {
+	a := assert.New(t)
+
+	t.Run("should return wrapped error when transaction begin fails", func(t *testing.T) {
+		repo := new(MockRepo)
+		svc := NewService(repo)
+
+		entity := &Entity{Name: "Alice"}
+		dbErr := errors.New("tx error")
+		want := fmt.Errorf("error creating transaction: %w", dbErr)
+
+		repo.On("BeginTransaction").Return((*sqlx.Tx)(nil), dbErr)
+
+		_, err := svc.SaveIfNameUnique(entity)
+		a.NotNil(err)
+		a.EqualError(err, want.Error())
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+	})
+
+	t.Run("should return wrapped error when checking name fails", func(t *testing.T) {
+		db, _, err := sqlmock.Newx()
+		a.NoError(err)
+		defer db.Close()
+
+		repo := new(MockRepo)
+		svc := NewService(repo)
+
+		entity := &Entity{Name: "Alice"}
+		tx, _ := db.Beginx()
+		dbErr := errors.New("check error")
+		want := fmt.Errorf("error checking name: %w", dbErr)
+
+		repo.On("BeginTransaction").Return(tx, nil)
+		repo.On("FindByNameTx", tx, entity.Name).Return(false, dbErr)
+
+		_, err = svc.SaveIfNameUnique(entity)
+		a.NotNil(err)
+		a.EqualError(err, want.Error())
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByNameTx", 1))
+	})
+
+	t.Run("should return error when employee already exists", func(t *testing.T) {
+		db, _, err := sqlmock.Newx()
+		a.NoError(err)
+		defer db.Close()
+
+		repo := new(MockRepo)
+		svc := NewService(repo)
+
+		entity := &Entity{Name: "Alice"}
+		tx, _ := db.Beginx()
+		want := fmt.Errorf("employee with name %s already exists", entity.Name)
+
+		repo.On("BeginTransaction").Return(tx, nil)
+		repo.On("FindByNameTx", tx, entity.Name).Return(true, nil)
+
+		_, err = svc.SaveIfNameUnique(entity)
+		a.NotNil(err)
+		a.EqualError(err, want.Error())
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByNameTx", 1))
+	})
+
+	t.Run("should return wrapped error when saving employee fails", func(t *testing.T) {
+		db, _, err := sqlmock.Newx()
+		a.NoError(err)
+		defer db.Close()
+
+		repo := new(MockRepo)
+		svc := NewService(repo)
+
+		entity := &Entity{Name: "Alice"}
+		tx, _ := db.Beginx()
+		dbErr := errors.New("save error")
+		want := fmt.Errorf("error saving employee: %w", dbErr)
+
+		repo.On("BeginTransaction").Return(tx, nil)
+		repo.On("FindByNameTx", tx, entity.Name).Return(false, nil)
+		repo.On("SaveTx", tx, entity).Return(int64(0), dbErr)
+
+		_, err = svc.SaveIfNameUnique(entity)
+		a.NotNil(err)
+		a.EqualError(err, want.Error())
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByNameTx", 1))
+		a.True(repo.AssertNumberOfCalls(t, "SaveTx", 1))
+	})
+
+	t.Run("should save employee", func(t *testing.T) {
+		db, _, err := sqlmock.Newx()
+		a.NoError(err)
+		defer db.Close()
+
+		repo := new(MockRepo)
+		svc := NewService(repo)
+
+		entity := &Entity{Name: "Alice"}
+		tx, _ := db.Beginx()
+
+		repo.On("BeginTransaction").Return(tx, nil)
+		repo.On("FindByNameTx", tx, entity.Name).Return(false, nil)
+		repo.On("SaveTx", tx, entity).Return(int64(1), nil)
+
+		id, err := svc.SaveIfNameUnique(entity)
+		a.NoError(err)
+		a.Equal(int64(1), id)
+		a.True(repo.AssertNumberOfCalls(t, "BeginTransaction", 1))
+		a.True(repo.AssertNumberOfCalls(t, "FindByNameTx", 1))
+		a.True(repo.AssertNumberOfCalls(t, "SaveTx", 1))
 	})
 }
 

@@ -3,6 +3,7 @@ package tests
 import (
 	"github.com/stretchr/testify/assert"
 	"idm/inner/database"
+	"idm/inner/employee"
 	"testing"
 )
 
@@ -72,5 +73,32 @@ func TestEmployeeRepository(t *testing.T) {
 
 		got, _ := fixture.employees.FindAllByIds([]int64{id1, id2})
 		a.Len(got, 0)
+	})
+
+	t.Run("create employee in transaction", func(t *testing.T) {
+		defer fixture.ClearDatabase()
+
+		tx, err := fixture.db.Beginx()
+		a.NoError(err)
+
+		exists, err := fixture.employees.FindByNameTx(tx, "Alice")
+		a.NoError(err)
+		a.False(exists)
+
+		entity := &employee.Entity{Name: "Alice"}
+		id, err := fixture.employees.SaveTx(tx, entity)
+		a.NoError(err)
+		a.NotZero(id)
+
+		exists, err = fixture.employees.FindByNameTx(tx, entity.Name)
+		a.NoError(err)
+		a.True(exists)
+
+		err = tx.Commit()
+		a.NoError(err)
+
+		saved, err := fixture.employees.FindById(id)
+		a.NoError(err)
+		a.Equal(entity.Name, saved.Name)
 	})
 }

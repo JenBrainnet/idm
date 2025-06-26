@@ -1,6 +1,9 @@
 package employee
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/jmoiron/sqlx"
+)
 
 type Service struct {
 	repo Repo
@@ -8,11 +11,14 @@ type Service struct {
 
 type Repo interface {
 	Save(e *Entity) (int64, error)
+	SaveTx(tx *sqlx.Tx, e *Entity) (int64, error)
 	FindById(id int64) (Entity, error)
 	FindAll() ([]Entity, error)
 	FindAllByIds(ids []int64) ([]Entity, error)
 	DeleteById(id int64) error
 	DeleteAllByIds(ids []int64) error
+	FindByNameTx(tx *sqlx.Tx, name string) (bool, error)
+	BeginTransaction() (*sqlx.Tx, error)
 }
 
 func NewService(repo Repo) *Service {
@@ -25,6 +31,56 @@ func (svc *Service) Save(e *Entity) (int64, error) {
 	id, err := svc.repo.Save(e)
 	if err != nil {
 		return 0, fmt.Errorf("error adding employee: %w", err)
+	}
+	return id, nil
+}
+
+func (svc *Service) SaveIfNameUnique(e *Entity) (id int64, err error) {
+	tx, err := svc.repo.BeginTransaction()
+
+	if err != nil {
+		return 0, fmt.Errorf("error creating transaction: %w", err)
+	}
+	// отложенная функция завершения транзакции
+	defer func() {
+		if tx == nil {
+			return // если транзакция не началась — ничего не делаем
+		}
+		// проверяем, не было ли паники
+		if r := recover(); r != nil {
+			err = fmt.Errorf("creating employee panic: %v", r)
+			// если была паника, то откатываем транзакцию
+			errTx := tx.Rollback()
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else if err != nil {
+			// если произошла другая ошибка (не паника), то откатываем транзакцию
+			errTx := tx.Rollback()
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else {
+			// если ошибок нет, то коммитим транзакцию
+			errTx := tx.Commit()
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: commiting transaction error: %w", errTx)
+			}
+		}
+	}()
+
+	// выполняем несколько запросов в базе данных
+	exists, err := svc.repo.FindByNameTx(tx, e.Name)
+	if err != nil {
+		return 0, fmt.Errorf("error checking name: %w", err)
+	}
+	if exists {
+		return 0, fmt.Errorf("employee with name %s already exists", e.Name)
+	}
+
+	id, err = svc.repo.SaveTx(tx, e)
+	if err != nil {
+		return 0, fmt.Errorf("error saving employee: %w", err)
 	}
 	return id, nil
 }
