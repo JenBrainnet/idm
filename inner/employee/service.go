@@ -3,15 +3,17 @@ package employee
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"idm/inner/common"
 )
 
 type Service struct {
-	repo Repo
+	repo      Repo
+	validator Validator
 }
 
 type Repo interface {
 	Save(e *Entity) (int64, error)
-	SaveTx(tx *sqlx.Tx, e *Entity) (int64, error)
+	SaveTx(tx *sqlx.Tx, e Entity) (int64, error)
 	FindById(id int64) (Entity, error)
 	FindAll() ([]Entity, error)
 	FindAllByIds(ids []int64) ([]Entity, error)
@@ -21,47 +23,42 @@ type Repo interface {
 	BeginTransaction() (*sqlx.Tx, error)
 }
 
-func NewService(repo Repo) *Service {
+type Validator interface {
+	Validate(request any) error
+}
+
+func NewService(repo Repo, validator Validator) *Service {
 	return &Service{
-		repo: repo,
+		repo:      repo,
+		validator: validator,
 	}
 }
 
-func (svc *Service) Save(e *Entity) (int64, error) {
-	id, err := svc.repo.Save(e)
+func (svc *Service) Create(request CreateRequest) (int64, error) {
+	err := svc.validator.Validate(request)
 	if err != nil {
-		return 0, fmt.Errorf("error adding employee: %w", err)
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
+		return 0, common.RequestValidationError{Message: err.Error()}
 	}
-	return id, nil
-}
 
-func (svc *Service) SaveIfNameUnique(e *Entity) (id int64, err error) {
 	tx, err := svc.repo.BeginTransaction()
 
-	if err != nil {
-		return 0, fmt.Errorf("error creating transaction: %w", err)
-	}
-	// отложенная функция завершения транзакции
 	defer func() {
 		if tx == nil {
-			return // если транзакция не началась — ничего не делаем
+			return
 		}
-		// проверяем, не было ли паники
 		if r := recover(); r != nil {
 			err = fmt.Errorf("creating employee panic: %v", r)
-			// если была паника, то откатываем транзакцию
 			errTx := tx.Rollback()
 			if errTx != nil {
 				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
 			}
 		} else if err != nil {
-			// если произошла другая ошибка (не паника), то откатываем транзакцию
 			errTx := tx.Rollback()
 			if errTx != nil {
 				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
 			}
 		} else {
-			// если ошибок нет, то коммитим транзакцию
 			errTx := tx.Commit()
 			if errTx != nil {
 				err = fmt.Errorf("creating employee: commiting transaction error: %w", errTx)
@@ -69,26 +66,36 @@ func (svc *Service) SaveIfNameUnique(e *Entity) (id int64, err error) {
 		}
 	}()
 
-	// выполняем несколько запросов в базе данных
-	exists, err := svc.repo.FindByNameTx(tx, e.Name)
 	if err != nil {
-		return 0, fmt.Errorf("error checking name: %w", err)
+		return 0, fmt.Errorf("error creating transaction: %w", err)
+	}
+
+	exists, err := svc.repo.FindByNameTx(tx, request.Name)
+	if err != nil {
+		return 0, fmt.Errorf("error finding employee by name: %s %w", request.Name, err)
 	}
 	if exists {
-		return 0, fmt.Errorf("employee with name %s already exists", e.Name)
+		return 0, common.AlreadyExistsError{
+			Message: fmt.Sprintf("employee with name %s already exists", request.Name)}
 	}
 
-	id, err = svc.repo.SaveTx(tx, e)
+	newEmployeeId, err := svc.repo.SaveTx(tx, request.ToEntity())
 	if err != nil {
-		return 0, fmt.Errorf("error saving employee: %w", err)
+		return 0, fmt.Errorf("error saving employee with name: %s %w", request.Name, err)
 	}
-	return id, nil
+	return newEmployeeId, nil
 }
 
-func (svc *Service) FindById(id int64) (Response, error) {
-	entity, err := svc.repo.FindById(id)
+func (svc *Service) FindById(request IdRequest) (Response, error) {
+	err := svc.validator.Validate(request)
 	if err != nil {
-		return Response{}, fmt.Errorf("error finding employee with id %d: %w", id, err)
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+	entity, err := svc.repo.FindById(request.Id)
+	if err != nil {
+		return Response{}, common.NotFoundError{
+			Message: fmt.Sprintf("error finding employee with id %d: %v", request.Id, err),
+		}
 	}
 	return entity.toResponse(), nil
 }
@@ -96,9 +103,10 @@ func (svc *Service) FindById(id int64) (Response, error) {
 func (svc *Service) FindAll() ([]Response, error) {
 	entities, err := svc.repo.FindAll()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving all employees: %w", err)
+		return nil, common.NotFoundError{
+			Message: fmt.Sprintf("error retrieving all employees: %v", err),
+		}
 	}
-
 	var responses []Response
 	for _, entity := range entities {
 		responses = append(responses, entity.toResponse())
@@ -106,12 +114,17 @@ func (svc *Service) FindAll() ([]Response, error) {
 	return responses, nil
 }
 
-func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
-	entities, err := svc.repo.FindAllByIds(ids)
+func (svc *Service) FindAllByIds(request IdsRequest) ([]Response, error) {
+	err := svc.validator.Validate(request)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving employees by ids %v: %w", ids, err)
+		return nil, common.RequestValidationError{Message: err.Error()}
 	}
-
+	entities, err := svc.repo.FindAllByIds(request.Ids)
+	if err != nil {
+		return nil, common.NotFoundError{
+			Message: fmt.Sprintf("error retrieving employees by ids %v: %v", request.Ids, err),
+		}
+	}
 	var responses []Response
 	for _, entity := range entities {
 		responses = append(responses, entity.toResponse())
@@ -119,18 +132,30 @@ func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 	return responses, nil
 }
 
-func (svc *Service) DeleteById(id int64) error {
-	err := svc.repo.DeleteById(id)
+func (svc *Service) DeleteById(request IdRequest) error {
+	err := svc.validator.Validate(request)
 	if err != nil {
-		return fmt.Errorf("error deleting employee with id %d: %w", id, err)
+		return common.RequestValidationError{Message: err.Error()}
+	}
+	err = svc.repo.DeleteById(request.Id)
+	if err != nil {
+		return common.NotFoundError{
+			Message: fmt.Sprintf("error deleting employee with id %d: %v", request.Id, err),
+		}
 	}
 	return nil
 }
 
-func (svc *Service) DeleteAllByIds(ids []int64) error {
-	err := svc.repo.DeleteAllByIds(ids)
+func (svc *Service) DeleteAllByIds(request IdsRequest) error {
+	err := svc.validator.Validate(request)
 	if err != nil {
-		return fmt.Errorf("error deleting employee by ids %v: %w", ids, err)
+		return common.RequestValidationError{Message: err.Error()}
+	}
+	err = svc.repo.DeleteAllByIds(request.Ids)
+	if err != nil {
+		return common.NotFoundError{
+			Message: fmt.Sprintf("error deleting employees by ids %v: %v", request.Ids, err),
+		}
 	}
 	return nil
 }
