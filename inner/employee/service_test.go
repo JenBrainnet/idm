@@ -103,7 +103,7 @@ func TestCreate(t *testing.T) {
 		repo := new(MockRepo)
 		svc := NewService(repo, validator.New())
 
-		entity := &Entity{Name: "Alice"}
+		entity := Entity{Name: "Alice"}
 		want := common.AlreadyExistsError{
 			Message: fmt.Sprintf("employee with name %s already exists", entity.Name),
 		}
