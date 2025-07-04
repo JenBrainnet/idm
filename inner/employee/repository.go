@@ -65,7 +65,7 @@ func (r *Repository) FindByNameTx(tx *sqlx.Tx, name string) (exists bool, err er
 	return exists, err
 }
 
-func (r *Repository) SaveTx(tx *sqlx.Tx, e *Entity) (id int64, err error) {
+func (r *Repository) SaveTx(tx *sqlx.Tx, e Entity) (id int64, err error) {
 	query := "insert into employee (name) values ($1) returning id"
 	err = tx.QueryRowx(query, e.Name).Scan(&id)
 	return id, err

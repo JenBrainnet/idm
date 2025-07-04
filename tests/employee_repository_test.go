@@ -85,7 +85,7 @@ func TestEmployeeRepository(t *testing.T) {
 		a.NoError(err)
 		a.False(exists)
 
-		entity := &employee.Entity{Name: "Alice"}
+		entity := employee.Entity{Name: "Alice"}
 		id, err := fixture.employees.SaveTx(tx, entity)
 		a.NoError(err)
 		a.NotZero(id)
