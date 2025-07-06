@@ -74,7 +74,7 @@ func (m *MockRepo) FindById(id int64) (role Entity, err error) {
 	return args.Get(0).(Entity), args.Error(1)
 }
 
-func TestSave(t *testing.T) {
+func TestServiceCreate(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should create role", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSave(t *testing.T) {
 	})
 }
 
-func TestFindById(t *testing.T) {
+func TestServiceFindById(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return found role", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestFindById(t *testing.T) {
 	})
 }
 
-func TestFindAll(t *testing.T) {
+func TestServiceFindAll(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return all roles", func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestFindAll(t *testing.T) {
 	})
 }
 
-func TestFindAllByIds(t *testing.T) {
+func TestServiceFindAllByIds(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return roles by ids", func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestFindAllByIds(t *testing.T) {
 	})
 }
 
-func TestDeleteById(t *testing.T) {
+func TestServiceDeleteById(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should delete role by id", func(t *testing.T) {
@@ -264,7 +264,7 @@ func TestDeleteById(t *testing.T) {
 	})
 }
 
-func TestDeleteAllByIds(t *testing.T) {
+func TestServiceDeleteAllByIds(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should delete all roles by ids", func(t *testing.T) {
