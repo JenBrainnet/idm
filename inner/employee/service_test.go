@@ -66,7 +66,7 @@ func (m *MockRepo) FindById(id int64) (employee Entity, err error) {
 	return args.Get(0).(Entity), args.Error(1)
 }
 
-func TestCreate(t *testing.T) {
+func TestServiceCreate(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return wrapped error when transaction begin fails", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestCreate(t *testing.T) {
 	})
 }
 
-func TestFindById(t *testing.T) {
+func TestServiceFindById(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return found employee", func(t *testing.T) {
@@ -213,7 +213,7 @@ func TestFindById(t *testing.T) {
 	})
 }
 
-func TestFindAll(t *testing.T) {
+func TestServiceFindAll(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return all employees", func(t *testing.T) {
@@ -255,7 +255,7 @@ func TestFindAll(t *testing.T) {
 	})
 }
 
-func TestFindAllByIds(t *testing.T) {
+func TestServiceFindAllByIds(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should return employees by ids", func(t *testing.T) {
@@ -300,7 +300,7 @@ func TestFindAllByIds(t *testing.T) {
 	})
 }
 
-func TestDeleteById(t *testing.T) {
+func TestServiceDeleteById(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should delete employee by id", func(t *testing.T) {
@@ -332,7 +332,7 @@ func TestDeleteById(t *testing.T) {
 	})
 }
 
-func TestDeleteAllByIds(t *testing.T) {
+func TestServiceDeleteAllByIds(t *testing.T) {
 	a := assert.New(t)
 
 	t.Run("should delete all employees by ids", func(t *testing.T) {
