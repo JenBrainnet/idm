@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"idm/inner/common"
 	"idm/inner/database"
@@ -13,11 +14,15 @@ const testDbDsn = "host=localhost port=5432 user=postgres password=postgres dbna
 func setTestEnv(driver, dsn string) {
 	_ = os.Setenv("DB_DRIVER_NAME", driver)
 	_ = os.Setenv("DB_DSN", dsn)
+	_ = os.Setenv("APP_NAME", "idm")
+	_ = os.Setenv("APP_VERSION", "0.0.0")
 }
 
 func unsetTestEnv() {
 	_ = os.Unsetenv("DB_DRIVER_NAME")
 	_ = os.Unsetenv("DB_DSN")
+	_ = os.Unsetenv("APP_NAME")
+	_ = os.Unsetenv("APP_VERSION")
 }
 
 // В проекте нет .env  файла (должны получить конфигурацию из переменных окружения)
@@ -31,12 +36,17 @@ func TestConfigNoEnvFileUseEnvVars(t *testing.T) {
 
 	a.Equal("postgres", cfg.DbDriverName)
 	a.Equal(testDbDsn, cfg.Dsn)
+	a.Equal("idm", cfg.AppName)
+	a.Equal("0.0.0", cfg.AppVersion)
 }
 
-// В проекте есть .env  файл, но в нём нет нужных переменных и в переменных окружения их
-// тоже нет (должны получить пустую структуру idm.inner.common.Config)
 func TestConfigEmptyEnvFileAndNoEnvVars(t *testing.T) {
 	a := assert.New(t)
+	defer func() {
+		r := recover()
+		a.NotNil(r, "Expected panic due to missing required config")
+		a.Contains(fmt.Sprintf("%v", r), "AppName") // можно проверить текст panic, если нужно
+	}()
 
 	tmp, _ := os.CreateTemp("", ".env")
 	_ = tmp.Close()
@@ -44,10 +54,7 @@ func TestConfigEmptyEnvFileAndNoEnvVars(t *testing.T) {
 
 	unsetTestEnv()
 
-	cfg := common.GetConfig(tmp.Name())
-
-	a.Empty(cfg.DbDriverName)
-	a.Empty(cfg.Dsn)
+	_ = common.GetConfig(tmp.Name())
 }
 
 // В проекте есть .env  файл и в нём нет нужных переменных, но в переменных окружения
@@ -77,7 +84,7 @@ func TestConfigNoEnvVarsUseEnvFile(t *testing.T) {
 	a := assert.New(t)
 
 	tmp, _ := os.CreateTemp("", ".env")
-	_, _ = tmp.WriteString("DB_DRIVER_NAME=postgres\nDB_DSN=" + testDbDsn + "\n")
+	_, _ = tmp.WriteString("DB_DRIVER_NAME=postgres\nDB_DSN=" + testDbDsn + "\nAPP_NAME=idm\nAPP_VERSION=0.0.0\n")
 	_ = tmp.Close()
 	defer func() { _ = os.Remove(tmp.Name()) }()
 
@@ -117,12 +124,12 @@ func TestConnectDbWithInvalidPortFails(t *testing.T) {
 				"but no panic occurred")
 		}
 	}()
-
 	cfg := common.Config{
 		DbDriverName: "postgres",
 		Dsn:          "host=localhost port=0000 user=postgres password=postgres dbname=idm_test_db sslmode=disable",
+		AppName:      "idm",
+		AppVersion:   "0.0.0",
 	}
-
 	_ = database.ConnectDbWithCfg(cfg)
 }
 
@@ -133,6 +140,8 @@ func TestConnectDbWithValidConfigOk(t *testing.T) {
 	cfg := common.Config{
 		DbDriverName: "postgres",
 		Dsn:          testDbDsn,
+		AppName:      "idm",
+		AppVersion:   "0.0.0",
 	}
 
 	db := database.ConnectDbWithCfg(cfg)
