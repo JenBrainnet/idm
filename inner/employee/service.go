@@ -107,7 +107,7 @@ func (svc *Service) FindAll() ([]Response, error) {
 			Message: fmt.Sprintf("error retrieving all employees: %v", err),
 		}
 	}
-	var responses []Response
+	responses := make([]Response, 0, len(entities))
 	for _, entity := range entities {
 		responses = append(responses, entity.toResponse())
 	}
@@ -125,7 +125,7 @@ func (svc *Service) FindAllByIds(request IdsRequest) ([]Response, error) {
 			Message: fmt.Sprintf("error retrieving employees by ids %v: %v", request.Ids, err),
 		}
 	}
-	var responses []Response
+	responses := make([]Response, 0, len(entities))
 	for _, entity := range entities {
 		responses = append(responses, entity.toResponse())
 	}

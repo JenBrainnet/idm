@@ -54,7 +54,7 @@ func (f *Fixture) Role(name string) int64 {
 	entity := role.Entity{
 		Name: name,
 	}
-	newId, err := f.roles.Save(&entity)
+	newId, err := f.roles.Save(entity)
 	if err != nil {
 		panic(err)
 	}

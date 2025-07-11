@@ -13,7 +13,7 @@ func NewRepository(database *sqlx.DB) *Repository {
 	return &Repository{db: database}
 }
 
-func (r *Repository) Save(role *Entity) (id int64, err error) {
+func (r *Repository) Save(role Entity) (id int64, err error) {
 	query := "insert into role (name) values ($1) returning id"
 	err = r.db.QueryRowx(query, role.Name).Scan(&id)
 	return id, err
