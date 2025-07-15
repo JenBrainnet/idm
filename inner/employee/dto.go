@@ -7,6 +7,7 @@ type Entity struct {
 	Name      string    `db:"name"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
+	RoleId    *int64    `db:"role_id"`
 }
 
 func (e *Entity) toResponse() Response {
