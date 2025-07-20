@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/78bits/go-sqlmock-sqlx"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"idm/inner/common"

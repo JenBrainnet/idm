@@ -2,7 +2,7 @@ package role
 
 import (
 	"errors"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 	"idm/inner/common"
 	"idm/inner/web"
 	"strconv"
@@ -38,9 +38,9 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupApiV1.Delete("/roles", c.DeleteAllByIds)
 }
 
-func (c *Controller) CreateRole(ctx fiber.Ctx) error {
+func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 	var request CreateRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
 
@@ -55,7 +55,7 @@ func (c *Controller) CreateRole(ctx fiber.Ctx) error {
 	return nil
 }
 
-func (c *Controller) FindById(ctx fiber.Ctx) error {
+func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -69,7 +69,7 @@ func (c *Controller) FindById(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, response)
 }
 
-func (c *Controller) FindAll(ctx fiber.Ctx) error {
+func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	responses, err := c.roleService.FindAll()
 	if err != nil {
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
@@ -77,9 +77,9 @@ func (c *Controller) FindAll(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, responses)
 }
 
-func (c *Controller) FindAllByIds(ctx fiber.Ctx) error {
+func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	var request IdsRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
 	responses, err := c.roleService.FindAllByIds(request)
@@ -89,7 +89,7 @@ func (c *Controller) FindAllByIds(ctx fiber.Ctx) error {
 	return common.OkResponse(ctx, responses)
 }
 
-func (c *Controller) DeleteById(ctx fiber.Ctx) error {
+func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -103,9 +103,9 @@ func (c *Controller) DeleteById(ctx fiber.Ctx) error {
 	return common.OkResponse[any](ctx, nil)
 }
 
-func (c *Controller) DeleteAllByIds(ctx fiber.Ctx) error {
+func (c *Controller) DeleteAllByIds(ctx *fiber.Ctx) error {
 	var request IdsRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
 	err := c.roleService.DeleteAllByIds(request)

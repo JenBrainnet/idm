@@ -2,7 +2,7 @@ package info
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 	"idm/inner/common"
 	"idm/inner/web"
@@ -33,7 +33,7 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupInternal.Get("/health", c.GetHealth)
 }
 
-func (c *Controller) GetInfo(ctx fiber.Ctx) error {
+func (c *Controller) GetInfo(ctx *fiber.Ctx) error {
 	err := ctx.Status(fiber.StatusOK).JSON(&InfoResponse{
 		Name:    c.cfg.AppName,
 		Version: c.cfg.AppVersion,
@@ -44,7 +44,7 @@ func (c *Controller) GetInfo(ctx fiber.Ctx) error {
 	return nil
 }
 
-func (c *Controller) GetHealth(ctx fiber.Ctx) error {
+func (c *Controller) GetHealth(ctx *fiber.Ctx) error {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
