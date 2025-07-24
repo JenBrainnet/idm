@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/info"
 	"idm/inner/web"
@@ -29,7 +30,8 @@ func TestGetInfo(t *testing.T) {
 			App:           app,
 			GroupInternal: app.Group("/internal"),
 		}
-		controller := info.NewController(server, cfg, nil)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := info.NewController(server, cfg, nil, logger)
 		controller.RegisterRoutes()
 
 		req := httptest.NewRequest(http.MethodGet, "/internal/info", nil)
@@ -61,7 +63,8 @@ func TestGetHealth(t *testing.T) {
 			GroupInternal: app.Group("/internal"),
 		}
 		cfg := common.Config{}
-		controller := info.NewController(server, cfg, sqlxDB)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := info.NewController(server, cfg, sqlxDB, logger)
 		controller.RegisterRoutes()
 
 		req := httptest.NewRequest(http.MethodGet, "/internal/health", nil)
@@ -86,7 +89,8 @@ func TestGetHealth(t *testing.T) {
 			GroupInternal: app.Group("/internal"),
 		}
 		cfg := common.Config{}
-		controller := info.NewController(server, cfg, sqlxDB)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := info.NewController(server, cfg, sqlxDB, logger)
 		controller.RegisterRoutes()
 
 		req := httptest.NewRequest(http.MethodGet, "/internal/health", nil)

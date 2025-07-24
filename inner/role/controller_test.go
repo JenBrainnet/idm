@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
 	"io"
@@ -58,7 +59,8 @@ func TestControllerCreateEmployee(t *testing.T) {
 	t.Run("should return created role id", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		body := strings.NewReader(`{"name":"admin"}`)
@@ -86,7 +88,8 @@ func TestControllerCreateEmployee(t *testing.T) {
 	t.Run("should return bad request on invalid json", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		body := strings.NewReader(`{invalid json`)
@@ -101,7 +104,8 @@ func TestControllerCreateEmployee(t *testing.T) {
 	t.Run("should return bad request on validation error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := CreateRequest{Name: ""}
@@ -128,7 +132,8 @@ func TestControllerCreateEmployee(t *testing.T) {
 	t.Run("should return internal server error on generic error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := CreateRequest{Name: "admin"}
@@ -158,7 +163,8 @@ func TestControllerFindById(t *testing.T) {
 	t.Run("should return role by id", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		role := Response{Id: 1, Name: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
@@ -188,7 +194,8 @@ func TestControllerFindById(t *testing.T) {
 	t.Run("should return not found error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		notFoundErr := common.NotFoundError{Message: "role with id 1 not found"}
@@ -212,7 +219,8 @@ func TestControllerFindById(t *testing.T) {
 	t.Run("should return bad request on invalid id", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		req := httptest.NewRequest(fiber.MethodGet, "/api/v1/roles/abc", nil)
@@ -234,7 +242,8 @@ func TestControllerFindById(t *testing.T) {
 	t.Run("should return internal server error on generic error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		svc.On("FindById", IdRequest{Id: 1}).Return(Response{}, errors.New("unexpected server error"))
@@ -262,7 +271,8 @@ func TestControllerFindAll(t *testing.T) {
 	t.Run("should return all roles", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		roles := []Response{
@@ -298,7 +308,8 @@ func TestControllerFindAll(t *testing.T) {
 	t.Run("should return not found error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		errNotFound := common.NotFoundError{Message: "no roles found"}
@@ -322,7 +333,8 @@ func TestControllerFindAll(t *testing.T) {
 	t.Run("should return internal server error on generic error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		svc.On("FindAll").Return([]Response(nil), errors.New("unexpected server error"))
@@ -352,7 +364,8 @@ func TestControllerFindAllByIds(t *testing.T) {
 	t.Run("should return all roles by ids", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		roles := []Response{
@@ -392,7 +405,8 @@ func TestControllerFindAllByIds(t *testing.T) {
 	t.Run("should return validation error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		validationErr := common.RequestValidationError{Message: "ids must not be empty"}
@@ -419,7 +433,8 @@ func TestControllerFindAllByIds(t *testing.T) {
 	t.Run("should return not found error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := IdsRequest{Ids: []int64{1, 2}}
@@ -446,7 +461,8 @@ func TestControllerFindAllByIds(t *testing.T) {
 	t.Run("should return internal server error on generic error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := IdsRequest{Ids: []int64{1, 2}}
@@ -478,7 +494,8 @@ func TestControllerDeleteById(t *testing.T) {
 	t.Run("should delete role by id", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		svc.On("DeleteById", IdRequest{Id: 1}).Return(nil)
@@ -503,7 +520,8 @@ func TestControllerDeleteById(t *testing.T) {
 	t.Run("should return bad request on invalid id", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		req := httptest.NewRequest(fiber.MethodDelete, "/api/v1/roles/abc", nil)
@@ -525,7 +543,8 @@ func TestControllerDeleteById(t *testing.T) {
 	t.Run("should return not found error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		errNotFound := common.NotFoundError{Message: "role not found"}
@@ -550,7 +569,8 @@ func TestControllerDeleteById(t *testing.T) {
 	t.Run("should return internal server error on generic error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		svc.On("DeleteById", IdRequest{Id: 1}).Return(errors.New("unexpected server error"))
@@ -581,7 +601,8 @@ func TestControllerDeleteAllByIds(t *testing.T) {
 	t.Run("should delete all roles by ids", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := IdsRequest{Ids: []int64{1, 2, 3}}
@@ -608,7 +629,8 @@ func TestControllerDeleteAllByIds(t *testing.T) {
 	t.Run("should return validation error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := IdsRequest{Ids: []int64{}}
@@ -635,7 +657,8 @@ func TestControllerDeleteAllByIds(t *testing.T) {
 	t.Run("should return not found error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := IdsRequest{Ids: []int64{1, 2, 3}}
@@ -662,7 +685,8 @@ func TestControllerDeleteAllByIds(t *testing.T) {
 	t.Run("should return internal server error on generic error", func(t *testing.T) {
 		server := web.NewServer()
 		svc := new(MockService)
-		controller := NewController(server, svc)
+		logger := &common.Logger{Logger: zap.NewNop()}
+		controller := NewController(server, svc, logger)
 		controller.RegisterRoutes()
 
 		request := IdsRequest{Ids: []int64{1, 2, 3}}
