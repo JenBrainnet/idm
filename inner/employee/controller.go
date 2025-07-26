@@ -2,7 +2,8 @@ package employee
 
 import (
 	"errors"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/web"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 type Controller struct {
 	server          *web.Server
 	employeeService Svc
+	logger          *common.Logger
 }
 
 type Svc interface {
@@ -22,10 +24,11 @@ type Svc interface {
 	DeleteAllByIds(request IdsRequest) error
 }
 
-func NewController(server *web.Server, employeeService Svc) *Controller {
+func NewController(server *web.Server, employeeService Svc, logger *common.Logger) *Controller {
 	return &Controller{
 		server:          server,
 		employeeService: employeeService,
+		logger:          logger,
 	}
 }
 
@@ -38,80 +41,104 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupApiV1.Delete("/employees", c.DeleteAllByIds)
 }
 
-func (c *Controller) CreateEmployee(ctx fiber.Ctx) error {
+func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	var request CreateRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error("create employee: failed to parse request body", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
 
+	c.logger.Debug("create employee: received request", zap.Any("request", request))
 	var newEmployeeId, err = c.employeeService.Create(request)
 	if err != nil {
+		c.logger.Error("create employee: service error", zap.Error(err))
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
 	}
 
+	c.logger.Debug("create employee: success", zap.Int64("id", newEmployeeId))
 	if err = common.OkResponse(ctx, newEmployeeId); err != nil {
+		c.logger.Error("create employee: failed to send response")
 		return common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning created employee id")
 	}
 	return nil
 }
 
-func (c *Controller) FindById(ctx fiber.Ctx) error {
+func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
+	c.logger.Debug("find employee by id: received id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error("find employee by id: invalid id parameter", zap.String("id", idStr), zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, "invalid id parameter")
 	}
 	request := IdRequest{Id: id}
 	response, err := c.employeeService.FindById(request)
 	if err != nil {
+		c.logger.Error("find employee by id: service error", zap.Int64("id", id), zap.Error(err))
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
 	}
+	c.logger.Debug("find employee by id: success", zap.Int64("id", id))
 	return common.OkResponse(ctx, response)
 }
 
-func (c *Controller) FindAll(ctx fiber.Ctx) error {
+func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	c.logger.Debug("find all employees: received request")
 	responses, err := c.employeeService.FindAll()
 	if err != nil {
+		c.logger.Error("find all employees: service error", zap.Error(err))
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
 	}
+	c.logger.Debug("find all employees: success", zap.Int("count", len(responses)))
 	return common.OkResponse(ctx, responses)
 }
 
-func (c *Controller) FindAllByIds(ctx fiber.Ctx) error {
+func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	var request IdsRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error("find all employees by ids: body parse error", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
+	c.logger.Debug("find all employees by ids: received request", zap.Any("request", request))
 	responses, err := c.employeeService.FindAllByIds(request)
 	if err != nil {
+		c.logger.Error("find all employees by ids: service error", zap.Error(err))
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
 	}
+	c.logger.Debug("find all employees by ids: success", zap.Int("count", len(responses)))
 	return common.OkResponse(ctx, responses)
 }
 
-func (c *Controller) DeleteById(ctx fiber.Ctx) error {
+func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
+	c.logger.Debug("delete employee by id: received id", zap.String("id", idStr))
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error("delete employee by id: invalid id parameter", zap.String("id", idStr), zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, "invalid id parameter")
 	}
 	request := IdRequest{Id: id}
 	err = c.employeeService.DeleteById(request)
 	if err != nil {
+		c.logger.Error("delete employee by id: service error", zap.Int64("id", id), zap.Error(err))
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
 	}
+	c.logger.Debug("delete employee by id: success", zap.Int64("id", id))
 	return common.OkResponse[any](ctx, nil)
 }
 
-func (c *Controller) DeleteAllByIds(ctx fiber.Ctx) error {
+func (c *Controller) DeleteAllByIds(ctx *fiber.Ctx) error {
 	var request IdsRequest
-	if err := ctx.Bind().Body(&request); err != nil {
+	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error("delete all employees by ids: body parse error", zap.Error(err))
 		return common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 	}
+	c.logger.Debug("delete all employees by ids: received request", zap.Any("request", request))
 	err := c.employeeService.DeleteAllByIds(request)
 	if err != nil {
+		c.logger.Error("delete all employees by ids: service error", zap.Error(err))
 		return common.ErrResponse(ctx, resolveHttpStatusCode(err), err.Error())
 	}
+	c.logger.Debug("delete all employees by ids: success", zap.Int("count", len(request.Ids)))
 	return common.OkResponse[any](ctx, nil)
 }
 
